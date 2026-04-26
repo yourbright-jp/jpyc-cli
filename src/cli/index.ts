@@ -15,6 +15,7 @@ import {
   type Hex,
 } from 'viem';
 import { privateKeyToAccount, generatePrivateKey } from 'viem/accounts';
+import { avalanche, mainnet, polygon } from 'viem/chains';
 
 export type CliRunResult = {
   exitCode: number;
@@ -61,6 +62,12 @@ const NETWORKS: Record<NetworkId, NetworkConfig> = {
   polygon: { name: 'polygon', chainId: 137, rpcUrlEnv: 'JPYC_POLYGON_RPC_URL', nativeSymbol: 'POL' },
   avalanche: { name: 'avalanche', chainId: 43114, rpcUrlEnv: 'JPYC_AVALANCHE_RPC_URL', nativeSymbol: 'AVAX' },
 };
+
+const NETWORK_CHAINS = {
+  ethereum: mainnet,
+  polygon,
+  avalanche,
+} as const;
 
 const ERC20_ABI = [
   { type: 'function', name: 'symbol', stateMutability: 'view', inputs: [], outputs: [{ name: '', type: 'string' }] },
@@ -331,7 +338,17 @@ class CliRuntime {
     const rpcEnv = this.configGet(`networks.${networkId}.rpcUrlEnv`) ?? network.rpcUrlEnv;
     const rpcUrl = this.env[rpcEnv];
     if (!rpcUrl) throw new CliError(2, 'RPC_URL_MISSING', `${rpcEnv} is required`);
-    return createPublicClient({ transport: http(rpcUrl) });
+    return createPublicClient({ chain: NETWORK_CHAINS[networkId], transport: http(rpcUrl) });
+  }
+
+  private async checkedPublicClient(networkId: NetworkId) {
+    const client = this.publicClient(networkId);
+    const expected = NETWORKS[networkId].chainId;
+    const actual = await client.getChainId();
+    if (actual !== expected) {
+      throw new CliError(1, 'RPC_CHAIN_ID_MISMATCH', `RPC chainId mismatch for ${networkId}: expected ${expected}, got ${actual}`);
+    }
+    return client;
   }
 
   private walletClient(networkId: NetworkId, wallet: WalletRecord) {
@@ -340,7 +357,7 @@ class CliRuntime {
     const rpcUrl = this.env[rpcEnv];
     if (!rpcUrl) throw new CliError(2, 'RPC_URL_MISSING', `${rpcEnv} is required`);
     const account = privateKeyToAccount(wallet.privateKey);
-    return createWalletClient({ account, transport: http(rpcUrl) });
+    return createWalletClient({ account, chain: NETWORK_CHAINS[networkId], transport: http(rpcUrl) });
   }
 
   private configGet(key: string | undefined) {
@@ -413,7 +430,7 @@ class CliRuntime {
 
   private async accountBalance(walletId: string | undefined, networkId: NetworkId, tokens: string | undefined) {
     const wallet = await this.findWallet(walletId);
-    const client = this.publicClient(networkId);
+    const client = await this.checkedPublicClient(networkId);
     const requested = (tokens ?? 'native').split(',').map((token) => token.trim());
     const balances = [];
     if (requested.includes('native')) {
@@ -434,7 +451,7 @@ class CliRuntime {
 
   private async accountNonce(walletId: string | undefined, networkId: NetworkId) {
     const wallet = await this.findWallet(walletId);
-    const client = this.publicClient(networkId);
+    const client = await this.checkedPublicClient(networkId);
     const nonce = await client.getTransactionCount({ address: wallet.address });
     return success({ network: networkId, address: wallet.address, nonce: nonce.toString() });
   }
@@ -455,7 +472,7 @@ class CliRuntime {
     const address = asAddress(flagString(flags, 'address'), '--address');
     const functionName = flagString(flags, 'function');
     if (!functionName) throw new CliError(2, 'INVALID_ARGUMENT', '--function is required');
-    const result = await (this.publicClient(networkId) as any).readContract({
+    const result = await ((await this.checkedPublicClient(networkId)) as any).readContract({
       address,
       abi: this.abiFromFlags(flags),
       functionName,
@@ -473,14 +490,14 @@ class CliRuntime {
     const abi = this.abiFromFlags(flags);
     const args = this.argsFromFlags(flags);
     const data = encodeFunctionData({ abi, functionName, args });
-    const client = this.publicClient(networkId);
+    const client = await this.checkedPublicClient(networkId);
     const base = { network: networkId, chainId: NETWORKS[networkId].chainId, to: address };
     if (flagBool(flags, 'dry-run')) {
       const gas = await client.estimateGas({ account: wallet.address, to: address, data });
       return success({ ok: true, command: 'contract.write', mode: 'dry-run', broadcast: false, tx: { ...base, gas: gas.toString() } });
     }
     if (!flagBool(flags, 'yes')) return failure(8, 'USER_CONFIRMATION_REQUIRED', 'Use --yes to broadcast contract write');
-    const txHash = await (this.walletClient(networkId, wallet) as any).writeContract({ address, abi, functionName, args, chain: null });
+    const txHash = await (this.walletClient(networkId, wallet) as any).writeContract({ address, abi, functionName, args, chain: NETWORK_CHAINS[networkId] });
     await client.waitForTransactionReceipt({ hash: txHash });
     return success({ ok: true, command: 'contract.write', broadcast: true, txHash, tx: base });
   }
@@ -489,13 +506,13 @@ class CliRuntime {
     const networkId = asNetwork(flagString(flags, 'network'));
     const wallet = await this.findWallet(flagString(flags, 'wallet'));
     const bytecode = asHex(flagString(flags, 'bytecode'), '--bytecode');
-    const client = this.publicClient(networkId);
+    const client = await this.checkedPublicClient(networkId);
     if (flagBool(flags, 'dry-run')) {
       const gas = await client.estimateGas({ account: wallet.address, data: bytecode });
       return success({ ok: true, command: 'contract.deploy', mode: 'dry-run', broadcast: false, tx: { network: networkId, chainId: NETWORKS[networkId].chainId, gas: gas.toString() } });
     }
     if (!flagBool(flags, 'yes')) return failure(8, 'USER_CONFIRMATION_REQUIRED', 'Use --yes to deploy contract');
-    const txHash = await (this.walletClient(networkId, wallet) as any).deployContract({ abi: [], bytecode, chain: null });
+    const txHash = await (this.walletClient(networkId, wallet) as any).deployContract({ abi: [], bytecode, chain: NETWORK_CHAINS[networkId] });
     const receipt = await client.waitForTransactionReceipt({ hash: txHash });
     return success({ ok: true, command: 'contract.deploy', broadcast: true, txHash, contractAddress: receipt.contractAddress });
   }
@@ -529,7 +546,7 @@ class CliRuntime {
   private async transferEstimate(flags: Record<string, string | boolean>) {
     const { networkId, from, to, amount, token } = this.transferParams(flags);
     const wallet = await this.findWallet(from);
-    const client = this.publicClient(networkId);
+    const client = await this.checkedPublicClient(networkId);
     const gas = token === 'native'
       ? await client.estimateGas({ account: wallet.address, to, value: parseEther(amount) })
       : await client.estimateGas({
@@ -543,7 +560,7 @@ class CliRuntime {
   private async transferSend(flags: Record<string, string | boolean>) {
     const { networkId, from, to, amount, token } = this.transferParams(flags);
     const wallet = await this.findWallet(from);
-    const client = this.publicClient(networkId);
+    const client = await this.checkedPublicClient(networkId);
     const isNative = token === 'native';
     const tokenInfo = isNative
       ? { symbol: NETWORKS[networkId].nativeSymbol, type: 'native' }
@@ -561,8 +578,8 @@ class CliRuntime {
     if (!flagBool(flags, 'yes')) return failure(8, 'USER_CONFIRMATION_REQUIRED', 'Use --yes to broadcast transfer');
     const walletClient = this.walletClient(networkId, wallet);
     const txHash = isNative
-      ? await (walletClient as any).sendTransaction({ to, value: parseEther(amount), chain: null })
-      : await (walletClient as any).writeContract({ address: JPYC_CONTRACT_ADDRESS, abi: ERC20_ABI, functionName: 'transfer', args: [to, parseUnits(amount, 18)], chain: null });
+      ? await (walletClient as any).sendTransaction({ to, value: parseEther(amount), chain: NETWORK_CHAINS[networkId] })
+      : await (walletClient as any).writeContract({ address: JPYC_CONTRACT_ADDRESS, abi: ERC20_ABI, functionName: 'transfer', args: [to, parseUnits(amount, 18)], chain: NETWORK_CHAINS[networkId] });
     await client.waitForTransactionReceipt({ hash: txHash });
     return success({ ok: true, command: 'transfer.send', broadcast: true, txHash, token: tokenInfo });
   }
