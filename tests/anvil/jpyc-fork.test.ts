@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { afterAll, describe, expect, it } from 'vitest';
-import { createPublicClient, formatUnits, http, parseUnits, type Address } from 'viem';
+import { createPublicClient, encodeAbiParameters, formatUnits, http, keccak256, padHex, parseUnits, toHex, type Address } from 'viem';
 
 import { createJpycCli } from '../../src/cli/index.js';
 
@@ -178,6 +178,45 @@ async function readJpycBalance(publicClient: ReturnType<typeof createPublicClien
   }) as Promise<bigint>;
 }
 
+function balanceStorageSlot(address: Address, mappingSlot: bigint) {
+  return keccak256(
+    encodeAbiParameters(
+      [
+        { name: 'account', type: 'address' },
+        { name: 'slot', type: 'uint256' },
+      ],
+      [address, mappingSlot],
+    ),
+  );
+}
+
+async function seedJpycBalanceOnFork(params: {
+  publicClient: ReturnType<typeof createPublicClient>;
+  rpcUrl: string;
+  holder: Address;
+  amount: bigint;
+}) {
+  const { publicClient, rpcUrl, holder, amount } = params;
+  const previousBalance = await readJpycBalance(publicClient, holder);
+  const targetValue = padHex(toHex(amount), { size: 32 });
+
+  for (let slot = 0n; slot < 100n; slot += 1n) {
+    const storageKey = balanceStorageSlot(holder, slot);
+    await publicClient.request({
+      method: 'anvil_setStorageAt',
+      params: [JPYC_CONTRACT_ADDRESS, storageKey, targetValue],
+    });
+    await publicClient.request({ method: 'anvil_mine', params: ['0x1'] });
+
+    const currentBalance = await readJpycBalance(publicClient, holder);
+    if (currentBalance === amount) {
+      return { mappingSlot: slot, previousBalance };
+    }
+  }
+
+  throw new Error(`Unable to seed JPYC balance for ${holder} on fork ${rpcUrl}; balance mapping slot was not found`);
+}
+
 const describeForks = RUN_FORK_TESTS ? describe : describe.skip;
 
 describeForks('JPYC CLI fork-backed API tests against real JPYC contracts', () => {
@@ -265,6 +304,15 @@ describeForks('JPYC CLI fork-backed API tests against real JPYC contracts', () =
           JSON.stringify([JPYC_ISSUER_ADDRESS]),
         ]);
 
+        const seededAmount = parseUnits('100', 18);
+        const seedResult = await seedJpycBalanceOnFork({
+          publicClient: fork.publicClient,
+          rpcUrl: fork.rpcUrl,
+          holder: ANVIL_ADDRESS,
+          amount: seededAmount,
+        });
+        expect(seedResult.mappingSlot).toBeGreaterThanOrEqual(0n);
+
         const receiverBalanceBefore = await readJpycBalance(fork.publicClient, RECEIVER);
         const transferPlan = await fixture.runJson([
           'transfer',
@@ -327,6 +375,23 @@ describeForks('JPYC CLI fork-backed API tests against real JPYC contracts', () =
           '--dry-run',
         ]);
         const receiverBalanceAfterDryRuns = await readJpycBalance(fork.publicClient, RECEIVER);
+        const actualTransfer = await fixture.runJson([
+          'transfer',
+          'send',
+          '--network',
+          target.id,
+          '--from',
+          'fork-signer',
+          '--to',
+          RECEIVER,
+          '--amount',
+          '1',
+          '--token',
+          'jpyc',
+          '--yes',
+        ]);
+        const receiverBalanceAfterTransfer = await readJpycBalance(fork.publicClient, RECEIVER);
+        const signerBalanceAfterTransfer = await readJpycBalance(fork.publicClient, ANVIL_ADDRESS);
 
         expect(schemaList.parsed.schemas).toEqual(expect.arrayContaining(['wallet.import', 'account.balance', 'transfer.send', 'contract.read']));
         expect(transferSchema.parsed.safety).toMatchObject({
@@ -385,6 +450,19 @@ describeForks('JPYC CLI fork-backed API tests against real JPYC contracts', () =
           },
         });
         expect(formatUnits(receiverBalanceAfterDryRuns - receiverBalanceBefore, 18)).toBe('0');
+        expect(actualTransfer.result.exitCode).toBe(0);
+        expect(actualTransfer.parsed).toMatchObject({
+          ok: true,
+          command: 'transfer.send',
+          broadcast: true,
+          token: {
+            symbol: 'JPYC',
+            address: JPYC_CONTRACT_ADDRESS,
+          },
+        });
+        expect(actualTransfer.parsed.txHash).toMatch(/^0x[a-fA-F0-9]{64}$/);
+        expect(formatUnits(receiverBalanceAfterTransfer - receiverBalanceBefore, 18)).toBe('1');
+        expect(formatUnits(seededAmount - signerBalanceAfterTransfer, 18)).toBe('1');
       } finally {
         await fixture.cleanup();
       }
