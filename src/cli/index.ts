@@ -312,11 +312,19 @@ class CliRuntime {
   }
 
   private async readWalletStore(): Promise<WalletStore> {
+    let raw: string;
     try {
-      const raw = await readFile(this.walletsPath(), 'utf8');
+      raw = await readFile(this.walletsPath(), 'utf8');
+    } catch (error) {
+      if (error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT') {
+        return { wallets: [] };
+      }
+      throw new CliError(1, 'WALLET_STORE_READ_FAILED', `Unable to read wallet store: ${error instanceof Error ? error.message : String(error)}`);
+    }
+    try {
       return JSON.parse(raw) as WalletStore;
-    } catch {
-      return { wallets: [] };
+    } catch (error) {
+      throw new CliError(1, 'WALLET_STORE_INVALID', `Wallet store is invalid JSON: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 
