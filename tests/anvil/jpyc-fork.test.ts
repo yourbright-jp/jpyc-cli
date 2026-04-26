@@ -17,6 +17,8 @@ const JPYC_REDEEM_ADDRESS = '0xb808af91bdc577bfb3f9c91470f3286dd076e5c1' as cons
 const INSECURE_ANVIL_PRIVATE_KEY = '0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80';
 const ANVIL_ADDRESS = '0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266' as const;
 const RECEIVER = '0x000000000000000000000000000000000000bEEF' as Address;
+const NATIVE_RECEIVER = '0x000000000000000000000000000000000000CAFE' as Address;
+const TEST_DEPLOY_INIT_CODE = '0x600a600c600039600a6000f3602a60005260206000f3' as const;
 
 const ERC20_ABI = [
   {
@@ -166,7 +168,12 @@ async function makeForkCliFixture(target: ForkTarget, rpcUrl: string) {
     return { result, parsed: JSON.parse(result.stdout) };
   }
 
-  return { homeDir, runJson, cleanup: () => rm(homeDir, { recursive: true, force: true }) };
+  async function runJsonInput(command: string, input: unknown) {
+    const result = await cli.run([command, '--json-input', JSON.stringify(input), '--output', 'json']);
+    return { result, parsed: JSON.parse(result.stdout) };
+  }
+
+  return { homeDir, runJson, runJsonInput, cleanup: () => rm(homeDir, { recursive: true, force: true }) };
 }
 
 async function readJpycBalance(publicClient: ReturnType<typeof createPublicClient>, address: Address) {
@@ -238,9 +245,17 @@ describeForks('JPYC CLI fork-backed API tests against real JPYC contracts', () =
 
         const schemaList = await fixture.runJson(['schema', 'list']);
         const transferSchema = await fixture.runJson(['schema', 'transfer.send']);
+        const walletCreateSchema = await fixture.runJson(['schema', 'wallet.create']);
+        const contractDeploySchema = await fixture.runJson(['schema', 'contract.deploy']);
         const configInit = await fixture.runJson(['config', 'init']);
+        const configGetBeforeSet = await fixture.runJson(['config', 'get', `networks.${target.id}.rpcUrlEnv`]);
+        const configSetRpcEnv = await fixture.runJson(['config', 'set', `networks.${target.id}.rpcUrlEnv`, target.cliRpcEnv]);
+        const configGetAfterSet = await fixture.runJson(['config', 'get', `networks.${target.id}.rpcUrlEnv`]);
         const networks = await fixture.runJson(['config', 'networks']);
         const tokens = await fixture.runJson(['config', 'tokens', '--network', target.id]);
+        const walletCreate = await fixture.runJson(['wallet', 'create', '--id', 'generated']);
+        const walletShowGenerated = await fixture.runJson(['wallet', 'show', '--id', 'generated']);
+        const walletExportWithoutYes = await fixture.runJson(['wallet', 'export-private-key', '--id', 'generated']);
         const walletImport = await fixture.runJson([
           'wallet',
           'import',
@@ -249,6 +264,9 @@ describeForks('JPYC CLI fork-backed API tests against real JPYC contracts', () =
           '--from-private-key-env',
           'INSECURE_ANVIL_PRIVATE_KEY',
         ]);
+        const walletList = await fixture.runJson(['wallet', 'list']);
+        const walletShowSigner = await fixture.runJson(['wallet', 'show', '--id', 'fork-signer']);
+        const walletExportSigner = await fixture.runJson(['wallet', 'export-private-key', '--id', 'fork-signer', '--yes']);
         const accountAddress = await fixture.runJson(['account', 'address', '--wallet', 'fork-signer']);
         const accountBalance = await fixture.runJson([
           'account',
@@ -303,6 +321,42 @@ describeForks('JPYC CLI fork-backed API tests against real JPYC contracts', () =
           '--args',
           JSON.stringify([JPYC_ISSUER_ADDRESS]),
         ]);
+        const missingWalletBalance = await fixture.runJson(['account', 'balance', '--wallet', 'missing', '--network', target.id]);
+        const invalidSchema = await fixture.runJson(['schema', 'does.not.exist']);
+
+        const deployDryRun = await fixture.runJson([
+          'contract',
+          'deploy',
+          '--network',
+          target.id,
+          '--wallet',
+          'fork-signer',
+          '--bytecode',
+          TEST_DEPLOY_INIT_CODE,
+          '--dry-run',
+        ]);
+        const deployWithoutYes = await fixture.runJson([
+          'contract',
+          'deploy',
+          '--network',
+          target.id,
+          '--wallet',
+          'fork-signer',
+          '--bytecode',
+          TEST_DEPLOY_INIT_CODE,
+        ]);
+        const deployActual = await fixture.runJson([
+          'contract',
+          'deploy',
+          '--network',
+          target.id,
+          '--wallet',
+          'fork-signer',
+          '--bytecode',
+          TEST_DEPLOY_INIT_CODE,
+          '--yes',
+        ]);
+        const deployedBytecode = await fork.publicClient.getBytecode({ address: deployActual.parsed.contractAddress });
 
         const seededAmount = parseUnits('100', 18);
         const seedResult = await seedJpycBalanceOnFork({
@@ -328,6 +382,60 @@ describeForks('JPYC CLI fork-backed API tests against real JPYC contracts', () =
           '--token',
           'jpyc',
         ]);
+        const transferEstimate = await fixture.runJson([
+          'transfer',
+          'estimate',
+          '--network',
+          target.id,
+          '--from',
+          'fork-signer',
+          '--to',
+          RECEIVER,
+          '--amount',
+          '1',
+          '--token',
+          'jpyc',
+        ]);
+        const jsonInputPlan = await fixture.runJsonInput('transfer.plan', {
+          network: target.id,
+          from: 'fork-signer',
+          to: RECEIVER,
+          amount: '1',
+          token: 'jpyc',
+        });
+        const nativeReceiverBefore = await fork.publicClient.getBalance({ address: NATIVE_RECEIVER });
+        const nativeTransferDryRun = await fixture.runJson([
+          'transfer',
+          'send',
+          '--network',
+          target.id,
+          '--from',
+          'fork-signer',
+          '--to',
+          NATIVE_RECEIVER,
+          '--amount',
+          '0.001',
+          '--token',
+          'native',
+          '--dry-run',
+        ]);
+        const nativeReceiverAfterDryRun = await fork.publicClient.getBalance({ address: NATIVE_RECEIVER });
+        const nativeTransferActual = await fixture.runJson([
+          'transfer',
+          'send',
+          '--network',
+          target.id,
+          '--from',
+          'fork-signer',
+          '--to',
+          NATIVE_RECEIVER,
+          '--amount',
+          '0.001',
+          '--token',
+          'native',
+          '--yes',
+        ]);
+        const nativeReceiverAfterTransfer = await fork.publicClient.getBalance({ address: NATIVE_RECEIVER });
         const transferDryRun = await fixture.runJson([
           'transfer',
           'send',
@@ -391,7 +499,25 @@ describeForks('JPYC CLI fork-backed API tests against real JPYC contracts', () =
           '--yes',
         ]);
         const receiverBalanceAfterTransfer = await readJpycBalance(fork.publicClient, RECEIVER);
-        const signerBalanceAfterTransfer = await readJpycBalance(fork.publicClient, ANVIL_ADDRESS);
+        const contractWriteActual = await fixture.runJson([
+          'contract',
+          'write',
+          '--network',
+          target.id,
+          '--wallet',
+          'fork-signer',
+          '--address',
+          JPYC_CONTRACT_ADDRESS,
+          '--abi-json',
+          JSON.stringify(ERC20_ABI),
+          '--function',
+          'transfer',
+          '--args',
+          JSON.stringify([RECEIVER, parseUnits('1', 18).toString()]),
+          '--yes',
+        ]);
+        const receiverBalanceAfterContractWrite = await readJpycBalance(fork.publicClient, RECEIVER);
+        const signerBalanceAfterContractWrite = await readJpycBalance(fork.publicClient, ANVIL_ADDRESS);
 
         expect(schemaList.parsed.schemas).toEqual(expect.arrayContaining(['wallet.import', 'account.balance', 'transfer.send', 'contract.read']));
         expect(transferSchema.parsed.safety).toMatchObject({
@@ -399,15 +525,39 @@ describeForks('JPYC CLI fork-backed API tests against real JPYC contracts', () =
           requiresYesForBroadcast: true,
           printsPrivateKey: false,
         });
+        expect(walletCreateSchema.parsed.command).toBe('wallet.create');
+        expect(walletCreateSchema.parsed.safety).toMatchObject({ printsPrivateKey: false });
+        expect(contractDeploySchema.parsed.command).toBe('contract.deploy');
+        expect(contractDeploySchema.parsed.safety).toMatchObject({ requiresYesForBroadcast: true });
         expect(configInit.parsed.ok).toBe(true);
+        expect(configGetBeforeSet.parsed.value).toBe(target.cliRpcEnv);
+        expect(configSetRpcEnv.parsed).toMatchObject({ ok: true, key: `networks.${target.id}.rpcUrlEnv`, value: target.cliRpcEnv });
+        expect(configGetAfterSet.parsed.value).toBe(target.cliRpcEnv);
         expect(networks.parsed.networks).toEqual(expect.arrayContaining([expect.objectContaining({ name: target.id, chainId: target.chainId })]));
         expect(tokens.parsed.tokens).toEqual(
           expect.arrayContaining([
             expect.objectContaining({ symbol: 'JPYC', type: 'erc20', decimals: 18, address: JPYC_CONTRACT_ADDRESS }),
           ]),
         );
+        expect(walletCreate.parsed).toMatchObject({ ok: true, secretPrinted: false });
+        expect(walletCreate.parsed.wallet).toMatchObject({ id: 'generated' });
+        expect(walletCreate.parsed.wallet.address).toMatch(/^0x[a-fA-F0-9]{40}$/);
+        expect(walletCreate.result.stdout).not.toContain('privateKey');
+        expect(walletShowGenerated.parsed.wallet).toMatchObject({ id: 'generated', address: walletCreate.parsed.wallet.address });
+        expect(walletShowGenerated.parsed.wallet).not.toHaveProperty('privateKey');
+        expect(walletExportWithoutYes.result.exitCode).toBe(8);
+        expect(walletExportWithoutYes.parsed.error.code).toBe('PRIVATE_KEY_EXPORT_REQUIRES_YES');
         expect(walletImport.parsed).toMatchObject({ ok: true, secretPrinted: false });
         expect(walletImport.parsed.wallet.address).toBe(ANVIL_ADDRESS);
+        expect(walletList.parsed.wallets).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({ id: 'generated', address: walletCreate.parsed.wallet.address }),
+            expect.objectContaining({ id: 'fork-signer', address: ANVIL_ADDRESS }),
+          ]),
+        );
+        expect(walletShowSigner.parsed.wallet).toMatchObject({ id: 'fork-signer', address: ANVIL_ADDRESS });
+        expect(walletShowSigner.parsed.wallet).not.toHaveProperty('privateKey');
+        expect(walletExportSigner.parsed.privateKey).toBe(INSECURE_ANVIL_PRIVATE_KEY);
         expect(accountAddress.parsed.address).toBe(ANVIL_ADDRESS);
         expect(accountBalance.parsed.balances).toEqual(
           expect.arrayContaining([
@@ -419,6 +569,18 @@ describeForks('JPYC CLI fork-backed API tests against real JPYC contracts', () =
         expect(symbol.parsed.result).toBe('JPYC');
         expect(decimals.parsed.result).toBe('18');
         expect(BigInt(balanceOfIssuer.parsed.result)).toBeGreaterThanOrEqual(0n);
+        expect(missingWalletBalance.result.exitCode).toBe(4);
+        expect(missingWalletBalance.parsed.error.code).toBe('WALLET_NOT_FOUND');
+        expect(invalidSchema.result.exitCode).toBe(2);
+        expect(invalidSchema.parsed.error.code).toBe('SCHEMA_NOT_FOUND');
+        expect(deployDryRun.parsed).toMatchObject({ ok: true, command: 'contract.deploy', mode: 'dry-run', broadcast: false });
+        expect(deployWithoutYes.result.exitCode).toBe(8);
+        expect(deployWithoutYes.parsed.error.code).toBe('USER_CONFIRMATION_REQUIRED');
+        expect(deployActual.parsed).toMatchObject({ ok: true, command: 'contract.deploy', broadcast: true });
+        expect(deployActual.parsed.txHash).toMatch(/^0x[a-fA-F0-9]{64}$/);
+        expect(deployActual.parsed.contractAddress).toMatch(/^0x[a-fA-F0-9]{40}$/);
+        expect(deployedBytecode).toMatch(/^0x[0-9a-fA-F]+$/);
+        expect(deployedBytecode).not.toBe('0x');
         expect(transferPlan.parsed.plan).toMatchObject({
           network: target.id,
           chainId: target.chainId,
@@ -426,6 +588,25 @@ describeForks('JPYC CLI fork-backed API tests against real JPYC contracts', () =
           token: 'JPYC',
           tokenAddress: JPYC_CONTRACT_ADDRESS,
         });
+        expect(transferEstimate.parsed).toMatchObject({ ok: true, command: 'transfer.estimate' });
+        expect(BigInt(transferEstimate.parsed.estimate.gas)).toBeGreaterThan(0n);
+        expect(jsonInputPlan.parsed.plan).toMatchObject({ network: target.id, to: RECEIVER, token: 'JPYC' });
+        expect(nativeTransferDryRun.parsed).toMatchObject({
+          ok: true,
+          command: 'transfer.send',
+          mode: 'dry-run',
+          broadcast: false,
+          token: { symbol: target.nativeSymbol, type: 'native' },
+        });
+        expect(nativeReceiverAfterDryRun - nativeReceiverBefore).toBe(0n);
+        expect(nativeTransferActual.parsed).toMatchObject({
+          ok: true,
+          command: 'transfer.send',
+          broadcast: true,
+          token: { symbol: target.nativeSymbol, type: 'native' },
+        });
+        expect(nativeTransferActual.parsed.txHash).toMatch(/^0x[a-fA-F0-9]{64}$/);
+        expect(formatUnits(nativeReceiverAfterTransfer - nativeReceiverBefore, 18)).toBe('0.001');
         expect(transferDryRun.parsed).toMatchObject({
           ok: true,
           command: 'transfer.send',
@@ -462,7 +643,10 @@ describeForks('JPYC CLI fork-backed API tests against real JPYC contracts', () =
         });
         expect(actualTransfer.parsed.txHash).toMatch(/^0x[a-fA-F0-9]{64}$/);
         expect(formatUnits(receiverBalanceAfterTransfer - receiverBalanceBefore, 18)).toBe('1');
-        expect(formatUnits(seededAmount - signerBalanceAfterTransfer, 18)).toBe('1');
+        expect(contractWriteActual.parsed).toMatchObject({ ok: true, command: 'contract.write', broadcast: true });
+        expect(contractWriteActual.parsed.txHash).toMatch(/^0x[a-fA-F0-9]{64}$/);
+        expect(formatUnits(receiverBalanceAfterContractWrite - receiverBalanceBefore, 18)).toBe('2');
+        expect(formatUnits(seededAmount - signerBalanceAfterContractWrite, 18)).toBe('2');
       } finally {
         await fixture.cleanup();
       }
