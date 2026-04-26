@@ -28,15 +28,6 @@ AI coding agent にセットアップさせる場合は、次のようなプロ�
 
 ```text
 @yourbright/jpyc-cli をインストールして動作確認してください。
-
-手順:
-1. Node.js が >=20.19.0 であることを確認する。
-2. 次を実行する: npm install -g @yourbright/jpyc-cli
-3. 次を実行して CLI を確認する: jpyc schema list --output json
-4. ローカルのテスト用ウォレットを作る:
-   jpyc wallet create --id default --output json
-5. 秘密鍵を表示、export、commit しない。
-6. 残高確認が必要な場合は、RPC URL を私に確認するか、既存の環境変数を使う。
 ```
 
 グローバルインストールせずに一度だけ実行する場合:

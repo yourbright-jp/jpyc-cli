@@ -5,3 +5,8 @@ coverage/
 .env.local
 *.log
 .worktrees/
+.superpowers/
+.codex
+.codex/
+videos/**/renders/*-draft*.mp4
+videos/**/renders/work-*/
