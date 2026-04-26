@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.14.2/dist/gsap.min.js"></script>
+    <style>
+      :root {
+        --bg: #eef2ff;
+        --surface: #ffffff;
+        --accent: #2563eb;
+        --accent-deep: #1d4ed8;
+        --ink: #0f172a;
+        --muted: #64748b;
+        --border: #e2e8f0;
+        --flow: #0d9488;
+        --flow-soft: #dbeafe;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        width: 1920px;
+        height: 1080px;
+        margin: 0;
+        overflow: hidden;
+        background: var(--bg);
+        color: var(--ink);
+        font-family: "Noto Sans JP", "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      [data-composition-id="jpyc-cli-release"] {
+        position: relative;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background:
+          radial-gradient(circle at 12% 18%, rgba(37, 99, 235, 0.18), transparent 30%),
+          radial-gradient(circle at 84% 76%, rgba(13, 148, 136, 0.16), transparent 28%),
+          linear-gradient(135deg, #f8fbff 0%, var(--bg) 72%);
+      }
+
+      .scene {
+        position: absolute;
+        inset: 0;
+        overflow: hidden;
+      }
+
+      .scene:not(#scene-title) {
+        opacity: 0;
+      }
+
+      .scene-content {
+        position: relative;
+        z-index: 3;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        width: 100%;
+        height: 100%;
+        padding: 108px 136px;
+        gap: 34px;
+      }
+
+      .ambient {
+        position: absolute;
+        inset: 0;
+        z-index: 1;
+        pointer-events: none;
+      }
+
+      .flow-line {
+        position: absolute;
+        height: 5px;
+        border-radius: 999px;
+        background: linear-gradient(90deg, transparent, rgba(37, 99, 235, 0.5), rgba(13, 148, 136, 0.6), transparent);
+        opacity: 0.62;
+      }
+
+      .flow-line.one {
+        top: 206px;
+        left: 150px;
+        width: 820px;
+      }
+
+      .flow-line.two {
+        right: 170px;
+        bottom: 218px;
+        width: 720px;
+      }
+
+      .flow-line.three {
+        top: 760px;
+        left: 396px;
+        width: 1040px;
+      }
+
+      .orbit {
+        position: absolute;
+        width: 360px;
+        height: 360px;
+        border: 1px solid rgba(37, 99, 235, 0.18);
+        border-radius: 50%;
+      }
+
+      .orbit.left {
+        left: -90px;
+        top: 110px;
+      }
+
+      .orbit.right {
+        right: -60px;
+        bottom: 84px;
+      }
+
+      .eyebrow {
+        width: fit-content;
+        border: 1px solid rgba(37, 99, 235, 0.2);
+        border-radius: 999px;
+        padding: 12px 18px;
+        background: rgba(255, 255, 255, 0.72);
+        color: var(--accent-deep);
+        font-size: 24px;
+        font-weight: 800;
+        text-transform: uppercase;
+      }
+
+      .hero-title {
+        max-width: 1180px;
+        margin: 0;
+        color: var(--ink);
+        font-size: 138px;
+        font-weight: 900;
+        line-height: 0.96;
+      }
+
+      .hero-title .brand-blue {
+        color: var(--accent-deep);
+      }
+
+      .lead {
+        max-width: 920px;
+        margin: 0;
+        color: #334155;
+        font-size: 42px;
+        font-weight: 700;
+        line-height: 1.34;
+      }
+
+      .stage-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 0.88fr) minmax(0, 1.12fr);
+        align-items: center;
+        gap: 60px;
+        width: 100%;
+      }
+
+      .node-row {
+        display: flex;
+        align-items: center;
+        gap: 26px;
+      }
+
+      .agent-node,
+      .cli-node,
+      .jpyc-node {
+        display: grid;
+        place-items: center;
+        width: 188px;
+        height: 188px;
+        border: 2px solid rgba(37, 99, 235, 0.24);
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.86);
+        box-shadow: 0 28px 70px rgba(15, 23, 42, 0.12);
+        color: var(--accent-deep);
+        font-size: 42px;
+        font-weight: 900;
+      }
+
+      .cli-node {
+        border-radius: 38px;
+      }
+
+      .jpyc-node {
+        color: var(--ink);
+      }
+
+      .connector {
+        width: 116px;
+        height: 7px;
+        border-radius: 999px;
+        background: linear-gradient(90deg, var(--accent), var(--flow));
+      }
+
+      .terminal {
+        overflow: hidden;
+        border: 1px solid var(--border);
+        border-radius: 26px;
+        background: rgba(255, 255, 255, 0.92);
+        box-shadow: 0 30px 90px rgba(15, 23, 42, 0.12);
+      }
+
+      .terminal-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        min-height: 68px;
+        border-bottom: 1px solid var(--border);
+        padding: 0 28px;
+        color: var(--muted);
+        font-size: 20px;
+        font-weight: 800;
+      }
+
+      .dots {
+        display: flex;
+        gap: 10px;
+      }
+
+      .dots span {
+        width: 15px;
+        height: 15px;
+        border-radius: 50%;
+        background: var(--flow-soft);
+      }
+
+      .dots span:nth-child(2) {
+        background: rgba(37, 99, 235, 0.42);
+      }
+
+      .dots span:nth-child(3) {
+        background: rgba(13, 148, 136, 0.44);
+      }
+
+      .terminal-body {
+        display: grid;
+        gap: 18px;
+        padding: 32px;
+        font-family: "JetBrains Mono", Consolas, monospace;
+      }
+
+      .cmd {
+        color: var(--accent-deep);
+        font-size: 30px;
+        font-weight: 800;
+        line-height: 1.45;
+      }
+
+      .json-row {
+        display: grid;
+        grid-template-columns: 180px 1fr;
+        gap: 18px;
+        align-items: center;
+        color: #334155;
+        font-size: 24px;
+        font-weight: 700;
+      }
+
+      .json-key {
+        color: var(--flow);
+      }
+
+      .feature-list {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 18px;
+        max-width: 1120px;
+      }
+
+      .feature-card,
+      .step-card,
+      .guard-card {
+        border: 1px solid var(--border);
+        border-radius: 24px;
+        padding: 28px;
+        background: rgba(255, 255, 255, 0.88);
+        box-shadow: 0 22px 52px rgba(15, 23, 42, 0.1);
+      }
+
+      .feature-card strong,
+      .step-card strong,
+      .guard-card strong {
+        display: block;
+        color: var(--accent-deep);
+        font-size: 31px;
+        line-height: 1.2;
+      }
+
+      .feature-card span,
+      .step-card span,
+      .guard-card span {
+        display: block;
+        margin-top: 12px;
+        color: #475569;
+        font-size: 22px;
+        font-weight: 700;
+        line-height: 1.42;
+      }
+
+      .workflow {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 22px;
+      }
+
+      .workflow .step-card {
+        min-height: 220px;
+      }
+
+      .guardrails {
+        display: grid;
+        grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+        align-items: stretch;
+        gap: 32px;
+      }
+
+      .guard-stack {
+        display: grid;
+        gap: 18px;
+      }
+
+      .guard-card {
+        border-color: rgba(13, 148, 136, 0.22);
+      }
+
+      .safe-gate {
+        display: grid;
+        place-items: center;
+        border: 2px solid rgba(13, 148, 136, 0.32);
+        border-radius: 34px;
+        background: rgba(255, 255, 255, 0.78);
+        box-shadow: 0 30px 90px rgba(13, 148, 136, 0.12);
+      }
+
+      .safe-gate-inner {
+        display: grid;
+        gap: 18px;
+        text-align: center;
+      }
+
+      .safe-gate-inner .check {
+        display: grid;
+        place-items: center;
+        width: 122px;
+        height: 122px;
+        margin: 0 auto;
+        border-radius: 50%;
+        background: var(--flow);
+        color: #ffffff;
+        font-size: 68px;
+        font-weight: 900;
+      }
+
+      .safe-gate-inner strong {
+        font-size: 44px;
+      }
+
+      .safe-gate-inner span {
+        color: #475569;
+        font-size: 25px;
+        font-weight: 800;
+      }
+
+      .cta-panel {
+        max-width: 1220px;
+        border: 1px solid rgba(37, 99, 235, 0.18);
+        border-radius: 38px;
+        padding: 56px;
+        background: rgba(255, 255, 255, 0.9);
+        box-shadow: 0 34px 100px rgba(15, 23, 42, 0.13);
+      }
+
+      .install-command {
+        margin-top: 28px;
+        border: 1px solid var(--border);
+        border-radius: 22px;
+        padding: 28px 34px;
+        background: #f8fbff;
+        color: var(--accent-deep);
+        font-family: "JetBrains Mono", Consolas, monospace;
+        font-size: 36px;
+        font-weight: 800;
+      }
+
+      .transition-wipe {
+        position: absolute;
+        inset: 0;
+        z-index: 30;
+        background:
+          linear-gradient(90deg, rgba(255, 255, 255, 0), rgba(255, 255, 255, 0.95) 24%, rgba(37, 99, 235, 0.96) 52%, rgba(13, 148, 136, 0.78) 76%, rgba(255, 255, 255, 0));
+        pointer-events: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="jpyc-cli-release" data-composition-id="jpyc-cli-release" data-start="0" data-duration="38" data-width="1920" data-height="1080">
+      <section id="scene-title" class="scene">
+        <div class="ambient">
+          <div class="orbit left"></div>
+          <div class="orbit right"></div>
+          <div class="flow-line one"></div>
+          <div class="flow-line two"></div>
+          <div class="flow-line three"></div>
+        </div>
+        <div class="scene-content">
+          <div class="eyebrow">Release announcement</div>
+          <h1 class="hero-title"><span class="brand-blue">JPYC</span>-CLI</h1>
+          <p class="lead">Local-first JPYC tooling for humans and AI agents</p>
+          <div class="feature-list">
+            <div class="feature-card">
+              <strong>JSON-first</strong>
+              <span>Predictable command output for scripts and agents.</span>
+            </div>
+            <div class="feature-card">
+              <strong>Local wallets</strong>
+              <span>Wallet files stay under your local control.</span>
+            </div>
+            <div class="feature-card">
+              <strong>Dry-run ready</strong>
+              <span>Plan before send, check before broadcast.</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="scene-schema" class="scene">
+        <div class="ambient">
+          <div class="orbit left"></div>
+          <div class="flow-line one"></div>
+          <div class="flow-line two"></div>
+        </div>
+        <div class="scene-content">
+          <div class="stage-grid">
+            <div>
+              <div class="eyebrow">Agent-safe surface</div>
+              <h2 class="hero-title" style="font-size: 88px">The agent reads the CLI before it acts.</h2>
+              <p class="lead">Schemas make command shape explicit and machine-readable.</p>
+              <div class="node-row">
+                <div class="agent-node">AI</div>
+                <div class="connector"></div>
+                <div class="cli-node">CLI</div>
+              </div>
+            </div>
+            <div class="terminal">
+              <div class="terminal-header">
+                <div class="dots"><span></span><span></span><span></span></div>
+                <span>schema</span>
+              </div>
+              <div class="terminal-body">
+                <div class="cmd">jpyc schema list --output json</div>
+                <div class="json-row"><span class="json-key">"commands"</span><span>["wallet.create", "account.balance", "transfer.send"]</span></div>
+                <div class="json-row"><span class="json-key">"output"</span><span>"json"</span></div>
+                <div class="json-row"><span class="json-key">"mutations"</span><span>"dry-run supported"</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="scene-wallet" class="scene">
+        <div class="ambient">
+          <div class="orbit right"></div>
+          <div class="flow-line one"></div>
+          <div class="flow-line three"></div>
+        </div>
+        <div class="scene-content">
+          <div class="eyebrow">Local preflight</div>
+          <h2 class="hero-title" style="font-size: 90px">Create, check, then move.</h2>
+          <p class="lead">JPYC-CLI keeps wallet control local and account checks explicit.</p>
+          <div class="workflow">
+            <div class="step-card">
+              <strong>Wallet</strong>
+              <span>jpyc wallet create --id default --output json</span>
+            </div>
+            <div class="step-card">
+              <strong>Balance</strong>
+              <span>jpyc account balance --wallet default --network polygon --tokens native,jpyc --output json</span>
+            </div>
+            <div class="step-card">
+              <strong>Private keys</strong>
+              <span>No private keys printed by default.</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="scene-guardrails" class="scene">
+        <div class="ambient">
+          <div class="orbit left"></div>
+          <div class="orbit right"></div>
+          <div class="flow-line two"></div>
+          <div class="flow-line three"></div>
+        </div>
+        <div class="scene-content">
+          <div class="eyebrow">Transfer guardrails</div>
+          <h2 class="hero-title" style="font-size: 90px">Plan before send. Dry-run before broadcast.</h2>
+          <div class="guardrails">
+            <div class="guard-stack">
+              <div class="guard-card">
+                <strong>Plan</strong>
+                <span>jpyc transfer plan --network polygon --from default --to &lt;address&gt; --amount 1 --token jpyc --output json</span>
+              </div>
+              <div class="guard-card">
+                <strong>Dry-run</strong>
+                <span>jpyc transfer send --network polygon --from default --to &lt;address&gt; --amount 1 --token jpyc --dry-run --output json</span>
+              </div>
+            </div>
+            <div class="safe-gate">
+              <div class="safe-gate-inner">
+                <div class="check">✓</div>
+                <strong>Explicit confirmation</strong>
+                <span>Broadcasting requires intent.</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="scene-cta" class="scene">
+        <div class="ambient">
+          <div class="orbit left"></div>
+          <div class="orbit right"></div>
+          <div class="flow-line one"></div>
+          <div class="flow-line two"></div>
+          <div class="flow-line three"></div>
+        </div>
+        <div class="scene-content">
+          <div class="cta-panel">
+            <div class="eyebrow">Now available</div>
+            <h2 class="hero-title" style="font-size: 108px"><span class="brand-blue">JPYC-CLI</span> is ready</h2>
+            <p class="lead">Local-first JPYC tooling for humans and agents</p>
+            <div class="install-command">npm install -g @yourbright/jpyc-cli</div>
+          </div>
+        </div>
+      </section>
+
+      <div class="transition-wipe"></div>
+    </div>
+
+    <script>
+      window.__timelines = window.__timelines || {};
+      const tl = gsap.timeline({ paused: true });
+      tl.set(".transition-wipe", { xPercent: -105 }, 0);
+
+      function fromIfAny(targets, vars, at) {
+        if (targets.length > 0) {
+          tl.from(targets, vars, at);
+        }
+      }
+
+      function toIfAny(targets, vars, at) {
+        if (targets.length > 0) {
+          tl.to(targets, vars, at);
+        }
+      }
+
+      function enterScene(scene, at) {
+        const q = gsap.utils.selector(scene);
+        fromIfAny(q(".eyebrow"), { y: 28, opacity: 0, duration: 0.45, ease: "power3.out" }, at + 0.1);
+        fromIfAny(q(".hero-title"), { y: 54, opacity: 0, duration: 0.65, ease: "power3.out" }, at + 0.22);
+        fromIfAny(q(".lead"), { y: 34, opacity: 0, duration: 0.55, ease: "power3.out" }, at + 0.42);
+        fromIfAny(q(".feature-card, .terminal, .node-row, .step-card, .guard-card, .safe-gate, .cta-panel"), { y: 48, opacity: 0, scale: 0.98, duration: 0.58, stagger: 0.08, ease: "power3.out" }, at + 0.62);
+        fromIfAny(q(".flow-line"), { scaleX: 0, opacity: 0, transformOrigin: "left center", duration: 0.72, stagger: 0.08, ease: "power2.out" }, at + 0.18);
+        fromIfAny(q(".orbit"), { scale: 0.86, opacity: 0, duration: 0.75, stagger: 0.08, ease: "power2.out" }, at + 0.1);
+      }
+
+      function ambientScene(scene, start, duration) {
+        const q = gsap.utils.selector(scene);
+        toIfAny(q(".flow-line.one"), { x: 56, duration, ease: "sine.inOut" }, start);
+        toIfAny(q(".flow-line.two"), { x: -42, duration, ease: "sine.inOut" }, start);
+        toIfAny(q(".flow-line.three"), { x: 38, duration, ease: "sine.inOut" }, start);
+        toIfAny(q(".orbit.left"), { scale: 1.06, rotation: 7, duration, ease: "sine.inOut" }, start);
+        toIfAny(q(".orbit.right"), { scale: 1.04, rotation: -6, duration, ease: "sine.inOut" }, start);
+      }
+
+      function transition(fromScene, toScene, at) {
+        tl.fromTo(".transition-wipe", { xPercent: -105 }, { xPercent: 105, duration: 0.58, ease: "power2.inOut" }, at);
+        tl.set(toScene, { opacity: 1 }, at + 0.18);
+        tl.set(fromScene, { opacity: 0 }, at + 0.42);
+        tl.set(".transition-wipe", { xPercent: -105 }, at + 0.6);
+      }
+
+      enterScene("#scene-title", 0);
+      ambientScene("#scene-title", 0, 5);
+      transition("#scene-title", "#scene-schema", 4.65);
+
+      enterScene("#scene-schema", 5);
+      ambientScene("#scene-schema", 5, 7);
+      transition("#scene-schema", "#scene-wallet", 11.65);
+
+      enterScene("#scene-wallet", 12);
+      ambientScene("#scene-wallet", 12, 9);
+      transition("#scene-wallet", "#scene-guardrails", 20.65);
+
+      enterScene("#scene-guardrails", 21);
+      ambientScene("#scene-guardrails", 21, 10);
+      transition("#scene-guardrails", "#scene-cta", 30.65);
+
+      enterScene("#scene-cta", 31);
+      ambientScene("#scene-cta", 31, 7);
+      tl.to("#jpyc-cli-release", { opacity: 0.96, duration: 0.7, ease: "power1.out" }, 37.2);
+
+      window.__timelines["jpyc-cli-release"] = tl;
+    </script>
+  </body>
+</html>

@@ -8,3 +8,5 @@ coverage/
 .superpowers/
 .codex
 .codex/
+videos/**/renders/*-draft*.mp4
+videos/**/renders/work-*/

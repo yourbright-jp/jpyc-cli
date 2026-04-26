@@ -114,7 +114,7 @@ npx hyperframes render --output renders/jpyc-cli-release.mp4 --quality standard
 ```
 ```
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 Run:
 
@@ -130,7 +130,7 @@ Expected: commit succeeds.
 **Files:**
 - Create: `videos/jpyc-cli-release/index.html`
 
-- [ ] **Step 1: Create root HyperFrames composition**
+- [x] **Step 1: Create root HyperFrames composition**
 
 Create `videos/jpyc-cli-release/index.html` as a standalone composition with:
 
@@ -149,7 +149,7 @@ The static layout must include these scene IDs:
 - `scene-guardrails`
 - `scene-cta`
 
-- [ ] **Step 2: Add visible scene content**
+- [x] **Step 2: Add visible scene content**
 
 Populate the five scenes with exact approved copy:
 
@@ -189,7 +189,7 @@ npm install -g @yourbright/jpyc-cli
 Local-first JPYC tooling for humans and agents
 ```
 
-- [ ] **Step 3: Check layout manually**
+- [x] **Step 3: Check layout manually**
 
 Run:
 
@@ -199,7 +199,7 @@ sed -n '1,260p' videos/jpyc-cli-release/index.html
 
 Expected: root composition, scene IDs, CSS, GSAP import, and timeline registration are present.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 Run:
 
@@ -215,7 +215,7 @@ Expected: commit succeeds.
 **Files:**
 - Modify: `videos/jpyc-cli-release/index.html`
 
-- [ ] **Step 1: Add deterministic scene timing**
+- [x] **Step 1: Add deterministic scene timing**
 
 Use the following timeline windows:
 
@@ -227,7 +227,7 @@ scene-guardrails: 21-31
 scene-cta: 31-38
 ```
 
-- [ ] **Step 2: Add entrance animations**
+- [x] **Step 2: Add entrance animations**
 
 Each scene must have `gsap.from()` entrances for:
 
@@ -239,7 +239,7 @@ Each scene must have `gsap.from()` entrances for:
 
 Use durations between `0.35` and `0.75` seconds, with overlapping starts.
 
-- [ ] **Step 3: Add transitions**
+- [x] **Step 3: Add transitions**
 
 Add a `.transition-wipe` element and animate it between scenes at:
 
@@ -252,11 +252,11 @@ Add a `.transition-wipe` element and animate it between scenes at:
 
 The outgoing scene must remain visible until the transition starts. Do not add non-final exit animations.
 
-- [ ] **Step 4: Add final fade**
+- [x] **Step 4: Add final fade**
 
 Only in the final scene, fade the full composition slightly after `37.2s`.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 Run:
 
@@ -272,7 +272,7 @@ Expected: commit succeeds.
 **Files:**
 - Modify: `videos/jpyc-cli-release/README.md` if validation reveals command adjustments.
 
-- [ ] **Step 1: Check Node version**
+- [x] **Step 1: Check Node version**
 
 Run:
 
@@ -282,7 +282,7 @@ node --version
 
 Expected for HyperFrames CLI: `v22.x` or newer.
 
-- [ ] **Step 2: Run HyperFrames lint when Node 22 is available**
+- [x] **Step 2: Run HyperFrames lint when Node 22 is available**
 
 Run from `videos/jpyc-cli-release`:
 
@@ -292,7 +292,7 @@ npx hyperframes lint .
 
 Expected: no lint errors.
 
-- [ ] **Step 3: Run HyperFrames inspect when Node 22 is available**
+- [x] **Step 3: Run HyperFrames inspect when Node 22 is available**
 
 Run from `videos/jpyc-cli-release`:
 
@@ -302,7 +302,7 @@ npx hyperframes inspect . --samples 15
 
 Expected: no canvas overflow or text clipping errors.
 
-- [ ] **Step 4: Render draft when Node 22 is available**
+- [x] **Step 4: Render draft when Node 22 is available**
 
 Run from `videos/jpyc-cli-release`:
 
@@ -312,7 +312,7 @@ npx hyperframes render --output renders/jpyc-cli-release-draft.mp4 --quality dra
 
 Expected: MP4 render completes.
 
-- [ ] **Step 5: Commit validation fixes**
+- [x] **Step 5: Commit validation fixes**
 
 If validation required file changes, run:
 

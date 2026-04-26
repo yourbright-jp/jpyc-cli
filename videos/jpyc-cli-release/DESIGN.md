@@ -19,7 +19,7 @@ Light, fluid, technical release announcement using JPYC info brand cues. The can
 ## Typography
 
 - UI and headlines: `Noto Sans JP`, `Inter`, system sans-serif.
-- Terminal and JSON: `SFMono-Regular`, `Menlo`, `Consolas`, monospace.
+- Terminal and JSON: `JetBrains Mono`, `Consolas`, monospace.
 - Headlines use 700-900 weight.
 - Terminal text uses 600-700 weight for legibility.
 
