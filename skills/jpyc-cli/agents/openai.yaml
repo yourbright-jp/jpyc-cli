@@ -1,0 +1,4 @@
+interface:
+  display_name: "JPYC CLI"
+  short_description: "Operate JPYC CLI safely"
+  default_prompt: "Use $jpyc-cli to install JPYC CLI, create a wallet, check balances, and dry-run transfers safely."
