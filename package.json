@@ -9,6 +9,7 @@
   "scripts": {
     "test": "npm run test:fork",
     "test:fork": "RUN_ANVIL_FORK_TESTS=1 vitest run tests/anvil/jpyc-fork.test.ts",
+    "test:fork:alchemy": "node scripts/run-fork-with-alchemy.mjs",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit"
   },
