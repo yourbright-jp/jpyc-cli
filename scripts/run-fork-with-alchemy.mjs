@@ -48,7 +48,9 @@ const alchemyForkUrls = {
 };
 
 for (const [envName, url] of Object.entries(alchemyForkUrls)) {
-  process.env[envName] ??= url;
+  // Force the fork suite to use Alchemy when this script is selected.
+  // This avoids accidental success via ambient public-node RPC env vars.
+  process.env[envName] = url;
 }
 
 process.env.RUN_ANVIL_FORK_TESTS = '1';

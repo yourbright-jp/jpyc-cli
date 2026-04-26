@@ -138,6 +138,10 @@ async function waitForFork(rpcUrl: string, chainId: number) {
   throw lastError;
 }
 
+function redactRpcUrl(value: string) {
+  return value.replace(/(g\.alchemy\.com\/v2\/)[^\s/?#]+/g, '$1***');
+}
+
 async function startFork(target: ForkTarget) {
   assertAnvilAvailable();
   const forkUrl: string | undefined = process.env[target.rpcEnv];
@@ -147,7 +151,7 @@ async function startFork(target: ForkTarget) {
 
   const port = randomPort();
   const rpcUrl = `http://127.0.0.1:${port}`;
-  if (process.env.JPYC_FORK_TEST_DEBUG === '1') console.error(`[${target.id}] starting anvil fork ${forkUrl}`);
+  if (process.env.JPYC_FORK_TEST_DEBUG === '1') console.error(`[${target.id}] starting anvil fork ${redactRpcUrl(forkUrl)}`);
   const child = spawn(
     'anvil',
     ['--host', '127.0.0.1', '--port', String(port), '--fork-url', forkUrl, '--chain-id', String(target.chainId)],
