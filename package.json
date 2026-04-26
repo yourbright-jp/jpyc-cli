@@ -7,9 +7,7 @@
     "jpyc": "./dist/cli/index.js"
   },
   "scripts": {
-    "test": "vitest run --exclude 'tests/anvil/**'",
-    "test:unit": "vitest run --exclude 'tests/anvil/**'",
-    "test:anvil": "RUN_ANVIL_TESTS=1 vitest run tests/anvil/anvil-cli.test.ts",
+    "test": "npm run test:fork",
     "test:fork": "RUN_ANVIL_FORK_TESTS=1 vitest run tests/anvil/jpyc-fork.test.ts",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit"
