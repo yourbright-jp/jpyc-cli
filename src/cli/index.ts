@@ -1,4 +1,5 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { createCipheriv, createDecipheriv, randomBytes, scryptSync } from 'node:crypto';
 import { join } from 'node:path';
 import {
   createPublicClient,
@@ -37,12 +38,23 @@ export type CreateJpycCliOptions = {
 type WalletRecord = {
   id: string;
   address: Address;
-  privateKey: Hex;
+  privateKey?: Hex;
+  keystore?: EncryptedPrivateKey;
   createdAt: string;
 };
 
 type WalletStore = {
   wallets: WalletRecord[];
+};
+
+type EncryptedPrivateKey = {
+  version: 1;
+  kdf: 'scrypt';
+  cipher: 'aes-256-gcm';
+  salt: string;
+  iv: string;
+  tag: string;
+  ciphertext: string;
 };
 
 type NetworkId = 'ethereum' | 'polygon' | 'avalanche';
@@ -364,8 +376,56 @@ class CliRuntime {
     const rpcEnv = this.configGet(`networks.${networkId}.rpcUrlEnv`) ?? network.rpcUrlEnv;
     const rpcUrl = this.env[rpcEnv];
     if (!rpcUrl) throw new CliError(2, 'RPC_URL_MISSING', `${rpcEnv} is required`);
-    const account = privateKeyToAccount(wallet.privateKey);
+    const account = privateKeyToAccount(this.walletPrivateKey(wallet));
     return createWalletClient({ account, chain: NETWORK_CHAINS[networkId], transport: http(rpcUrl) });
+  }
+
+  private keystorePassword() {
+    const password = this.env.JPYC_KEYSTORE_PASSWORD;
+    if (!password) throw new CliError(2, 'KEYSTORE_PASSWORD_MISSING', 'JPYC_KEYSTORE_PASSWORD is required');
+    return password;
+  }
+
+  private encryptionKey(saltHex: string) {
+    return scryptSync(this.keystorePassword(), Buffer.from(saltHex, 'hex'), 32);
+  }
+
+  private encryptPrivateKey(privateKey: Hex): EncryptedPrivateKey {
+    const salt = randomBytes(16);
+    const iv = randomBytes(12);
+    const key = this.encryptionKey(salt.toString('hex'));
+    const cipher = createCipheriv('aes-256-gcm', key, iv);
+    const ciphertext = Buffer.concat([cipher.update(privateKey, 'utf8'), cipher.final()]);
+    return {
+      version: 1,
+      kdf: 'scrypt',
+      cipher: 'aes-256-gcm',
+      salt: salt.toString('hex'),
+      iv: iv.toString('hex'),
+      tag: cipher.getAuthTag().toString('hex'),
+      ciphertext: ciphertext.toString('hex'),
+    };
+  }
+
+  private decryptPrivateKey(keystore: EncryptedPrivateKey): Hex {
+    if (keystore.version !== 1 || keystore.kdf !== 'scrypt' || keystore.cipher !== 'aes-256-gcm') {
+      throw new CliError(1, 'KEYSTORE_UNSUPPORTED', 'Unsupported wallet keystore format');
+    }
+    try {
+      const decipher = createDecipheriv('aes-256-gcm', this.encryptionKey(keystore.salt), Buffer.from(keystore.iv, 'hex'));
+      decipher.setAuthTag(Buffer.from(keystore.tag, 'hex'));
+      const privateKey = Buffer.concat([decipher.update(Buffer.from(keystore.ciphertext, 'hex')), decipher.final()]).toString('utf8');
+      return asHex(privateKey, 'decrypted private key');
+    } catch (error) {
+      if (error instanceof CliError) throw error;
+      throw new CliError(1, 'KEYSTORE_DECRYPT_FAILED', `Unable to decrypt wallet private key: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  private walletPrivateKey(wallet: WalletRecord): Hex {
+    if (wallet.keystore) return this.decryptPrivateKey(wallet.keystore);
+    if (wallet.privateKey) return wallet.privateKey;
+    throw new CliError(1, 'KEYSTORE_MISSING', `Wallet has no private key material: ${wallet.id}`);
   }
 
   private configGet(key: string | undefined) {
@@ -398,7 +458,7 @@ class CliRuntime {
     const account = privateKeyToAccount(privateKey);
     const store = await this.readWalletStore();
     store.wallets = store.wallets.filter((wallet) => wallet.id !== id);
-    store.wallets.push({ id, privateKey, address: account.address.toLowerCase() as Address, createdAt: new Date().toISOString() });
+    store.wallets.push({ id, keystore: this.encryptPrivateKey(privateKey), address: account.address.toLowerCase() as Address, createdAt: new Date().toISOString() });
     await this.writeWalletStore(store);
     return success({ ok: true, secretPrinted: false, wallet: { id, address: account.address.toLowerCase() } });
   }
@@ -410,7 +470,7 @@ class CliRuntime {
     const account = privateKeyToAccount(privateKey);
     const store = await this.readWalletStore();
     store.wallets = store.wallets.filter((wallet) => wallet.id !== id);
-    store.wallets.push({ id, privateKey, address: account.address.toLowerCase() as Address, createdAt: new Date().toISOString() });
+    store.wallets.push({ id, keystore: this.encryptPrivateKey(privateKey), address: account.address.toLowerCase() as Address, createdAt: new Date().toISOString() });
     await this.writeWalletStore(store);
     return success({ ok: true, secretPrinted: false, wallet: { id, address: account.address.toLowerCase() } });
   }
@@ -428,7 +488,7 @@ class CliRuntime {
   private async walletExport(id: string | undefined, yes: boolean) {
     if (!yes) return failure(8, 'PRIVATE_KEY_EXPORT_REQUIRES_YES', 'Use --yes to export a private key');
     const wallet = await this.findWallet(id);
-    return success({ ok: true, wallet: { id: wallet.id, address: wallet.address }, privateKey: wallet.privateKey });
+    return success({ ok: true, wallet: { id: wallet.id, address: wallet.address }, privateKey: this.walletPrivateKey(wallet) });
   }
 
   private async accountAddress(walletId: string | undefined) {
