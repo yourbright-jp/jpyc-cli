@@ -4,7 +4,19 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { setTimeout as delay } from 'node:timers/promises';
 import { afterAll, describe, expect, it } from 'vitest';
-import { createPublicClient, encodeAbiParameters, formatUnits, http, keccak256, padHex, parseUnits, toHex, type Address } from 'viem';
+import {
+  createPublicClient,
+  encodeAbiParameters,
+  encodeFunctionData,
+  formatUnits,
+  http,
+  keccak256,
+  padHex,
+  parseEther,
+  parseUnits,
+  toHex,
+  type Address,
+} from 'viem';
 
 import { createJpycCli } from '../../src/cli/index.js';
 
@@ -135,13 +147,18 @@ async function startFork(target: ForkTarget) {
 
   const port = randomPort();
   const rpcUrl = `http://127.0.0.1:${port}`;
+  if (process.env.JPYC_FORK_TEST_DEBUG === '1') console.error(`[${target.id}] starting anvil fork ${forkUrl}`);
   const child = spawn(
     'anvil',
     ['--host', '127.0.0.1', '--port', String(port), '--fork-url', forkUrl, '--chain-id', String(target.chainId)],
     { stdio: 'pipe' },
   );
   child.on('error', () => undefined);
+  child.stderr.on('data', (chunk) => {
+    if (process.env.JPYC_FORK_TEST_DEBUG === '1') console.error(`[${target.id}] anvil ${String(chunk).trim()}`);
+  });
   const publicClient = await waitForFork(rpcUrl, target.chainId);
+  if (process.env.JPYC_FORK_TEST_DEBUG === '1') console.error(`[${target.id}] anvil fork ready ${rpcUrl}`);
   return { process: child, rpcUrl, publicClient };
 }
 
@@ -164,12 +181,16 @@ async function makeForkCliFixture(target: ForkTarget, rpcUrl: string) {
   });
 
   async function runJson(args: string[]) {
+    if (process.env.JPYC_FORK_TEST_DEBUG === '1') console.error(`[${target.id}] cli ${args.join(' ')}`);
     const result = await cli.run([...args, '--output', 'json']);
+    if (process.env.JPYC_FORK_TEST_DEBUG === '1') console.error(`[${target.id}] cli done ${args.join(' ')} exit=${result.exitCode}`);
     return { result, parsed: JSON.parse(result.stdout) };
   }
 
   async function runJsonInput(command: string, input: unknown) {
+    if (process.env.JPYC_FORK_TEST_DEBUG === '1') console.error(`[${target.id}] cli ${command} --json-input`);
     const result = await cli.run([command, '--json-input', JSON.stringify(input), '--output', 'json']);
+    if (process.env.JPYC_FORK_TEST_DEBUG === '1') console.error(`[${target.id}] cli done ${command} --json-input exit=${result.exitCode}`);
     return { result, parsed: JSON.parse(result.stdout) };
   }
 
@@ -205,23 +226,43 @@ async function seedJpycBalanceOnFork(params: {
 }) {
   const { publicClient, rpcUrl, holder, amount } = params;
   const previousBalance = await readJpycBalance(publicClient, holder);
-  const targetValue = padHex(toHex(amount), { size: 32 });
 
-  for (let slot = 0n; slot < 100n; slot += 1n) {
-    const storageKey = balanceStorageSlot(holder, slot);
+  await publicClient.request({
+    method: 'anvil_impersonateAccount',
+    params: [JPYC_ISSUER_ADDRESS],
+  });
+  try {
     await publicClient.request({
-      method: 'anvil_setStorageAt',
-      params: [JPYC_CONTRACT_ADDRESS, storageKey, targetValue],
+      method: 'anvil_setBalance',
+      params: [JPYC_ISSUER_ADDRESS, toHex(parseEther('10'))],
     });
-    await publicClient.request({ method: 'anvil_mine', params: ['0x1'] });
-
+    const txHash = await publicClient.request({
+      method: 'eth_sendTransaction',
+      params: [
+        {
+          from: JPYC_ISSUER_ADDRESS,
+          to: JPYC_CONTRACT_ADDRESS,
+          data: encodeFunctionData({
+            abi: ERC20_ABI,
+            functionName: 'transfer',
+            args: [holder, amount],
+          }),
+        },
+      ],
+    });
+    await publicClient.waitForTransactionReceipt({ hash: txHash as `0x${string}` });
     const currentBalance = await readJpycBalance(publicClient, holder);
-    if (currentBalance === amount) {
-      return { mappingSlot: slot, previousBalance };
+    if (currentBalance >= previousBalance + amount) {
+      return { seedMethod: 'impersonated-transfer', txHash, previousBalance };
     }
+  } finally {
+    await publicClient.request({
+      method: 'anvil_stopImpersonatingAccount',
+      params: [JPYC_ISSUER_ADDRESS],
+    });
   }
 
-  throw new Error(`Unable to seed JPYC balance for ${holder} on fork ${rpcUrl}; balance mapping slot was not found`);
+  throw new Error(`Unable to seed JPYC balance for ${holder} on fork ${rpcUrl}; impersonated transfer from JPYC issuer failed`);
 }
 
 const describeForks = RUN_FORK_TESTS ? describe : describe.skip;
@@ -365,7 +406,7 @@ describeForks('JPYC CLI fork-backed API tests against real JPYC contracts', () =
           holder: ANVIL_ADDRESS,
           amount: seededAmount,
         });
-        expect(seedResult.mappingSlot).toBeGreaterThanOrEqual(0n);
+        expect(seedResult.seedMethod).toMatch(/^(storage-slot|impersonated-transfer)$/);
 
         const receiverBalanceBefore = await readJpycBalance(fork.publicClient, RECEIVER);
         const transferPlan = await fixture.runJson([

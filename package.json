@@ -17,5 +17,8 @@
     "typescript": "^5.9.3",
     "viem": "^2.48.4",
     "vitest": "^4.0.15"
+  },
+  "dependencies": {
+    "@noble/ciphers": "^2.2.0"
   }
 }
