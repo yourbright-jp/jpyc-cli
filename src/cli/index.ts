@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { chmod, lstat, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { createCipheriv, createDecipheriv, randomBytes, scryptSync } from 'node:crypto';
 import { join } from 'node:path';
 import {
@@ -313,6 +313,7 @@ class CliRuntime {
 
   private async ensureHome() {
     await mkdir(this.homeDir, { recursive: true });
+    await chmod(this.homeDir, 0o700);
   }
 
   private walletsPath() {
@@ -342,7 +343,20 @@ class CliRuntime {
 
   private async writeWalletStore(store: WalletStore) {
     await this.ensureHome();
+    try {
+      const status = await lstat(this.walletsPath());
+      if (status.isSymbolicLink() || !status.isFile()) {
+        throw new CliError(1, 'WALLET_STORE_UNSAFE', 'Wallet store must be a regular file');
+      }
+      await chmod(this.walletsPath(), 0o600);
+    } catch (error) {
+      if (error instanceof CliError) throw error;
+      if (!(error && typeof error === 'object' && 'code' in error && error.code === 'ENOENT')) {
+        throw new CliError(1, 'WALLET_STORE_UNSAFE', `Unable to verify wallet store permissions: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    }
     await writeFile(this.walletsPath(), `${jsonStringify(store)}\n`, { mode: 0o600 });
+    await chmod(this.walletsPath(), 0o600);
   }
 
   private async findWallet(id: string | undefined): Promise<WalletRecord> {
