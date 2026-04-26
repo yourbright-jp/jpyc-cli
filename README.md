@@ -1,71 +1,71 @@
 # JPYC CLI
 
-Local-first command-line tooling for JPYC wallets, balances, contract calls, and transfers on EVM networks.
+JPYC CLI は、EVM ネットワーク上の JPYC ウォレット作成、残高確認、コントラクト呼び出し、送金をローカルで行うためのコマンドラインツールです。
 
-JPYC CLI is designed for both humans and AI agents: every command can return JSON, mutating commands support dry runs, and private keys are never printed unless explicitly exported.
+人間と AI エージェントの両方から使いやすいように、各コマンドは JSON 出力に対応し、送金などの破壊的な操作は dry-run と明示確認を前提にしています。
 
-## Requirements
+## 要件
 
 - Node.js `>=20.19.0`
-- RPC URLs for the networks you want to use
-- Native gas token on the sending network when broadcasting transactions
+- 利用するネットワークの RPC URL
+- 実送金する場合は、送信元ウォレットに対象ネットワークのネイティブガス代
 
-## Install
+## インストール
 
 ```bash
 npm install -g @yourbright/jpyc-cli
 ```
 
-Check that the binary is available:
+インストール確認:
 
 ```bash
 jpyc schema list --output json
 ```
 
-## Install Via Prompt
+## プロンプト経由でインストールする
 
-If you are using an AI coding agent, give it a prompt like this:
+AI coding agent にセットアップさせる場合は、次のようなプロンプトを渡してください。
 
 ```text
-Install and verify @yourbright/jpyc-cli.
+@yourbright/jpyc-cli をインストールして動作確認してください。
 
-Steps:
-1. Confirm Node.js is >=20.19.0.
-2. Run: npm install -g @yourbright/jpyc-cli
-3. Run: jpyc schema list --output json
-4. Create a local test wallet with:
+手順:
+1. Node.js が >=20.19.0 であることを確認する。
+2. 次を実行する: npm install -g @yourbright/jpyc-cli
+3. 次を実行して CLI を確認する: jpyc schema list --output json
+4. ローカルのテスト用ウォレットを作る:
    jpyc wallet create --id default --output json
-5. Do not print, export, or commit private keys.
-6. If checking balances, ask me for the RPC URL or use an existing environment variable.
+5. 秘密鍵を表示、export、commit しない。
+6. 残高確認が必要な場合は、RPC URL を私に確認するか、既存の環境変数を使う。
 ```
 
-For a one-off run without global install:
+グローバルインストールせずに一度だけ実行する場合:
 
 ```bash
 npx --yes --package=@yourbright/jpyc-cli -- jpyc schema list --output json
 ```
 
-## Quick Start
+## クイックスタート
 
-Create a wallet:
+ウォレットを作成:
 
 ```bash
 jpyc wallet create --id default --output json
 ```
 
-List wallets:
+ウォレット一覧:
 
 ```bash
 jpyc wallet list --output json
 ```
 
-Configure an RPC URL through your shell:
+Polygon RPC URL を設定:
 
 ```bash
 export JPYC_POLYGON_RPC_URL="https://polygon-mainnet.g.alchemy.com/v2/<key>"
 ```
 
-Check native and JPYC balances:
+ネイティブトークンと JPYC の残高確認:
 
 ```bash
 jpyc account balance \
@@ -75,7 +75,7 @@ jpyc account balance \
   --output json
 ```
 
-Plan a JPYC transfer:
+JPYC 送金内容の確認:
 
 ```bash
 jpyc transfer plan \
@@ -87,7 +87,7 @@ jpyc transfer plan \
   --output json
 ```
 
-Dry-run the transfer before broadcasting:
+送金前の dry-run:
 
 ```bash
 jpyc transfer send \
@@ -100,7 +100,7 @@ jpyc transfer send \
   --output json
 ```
 
-Broadcast only after checking the dry-run result:
+dry-run の結果を確認してから実送金:
 
 ```bash
 jpyc transfer send \
@@ -113,28 +113,28 @@ jpyc transfer send \
   --output json
 ```
 
-## Safety Notes
+## 安全上の注意
 
-- JPYC CLI is non-custodial. You control the wallet files.
-- Wallet data is stored locally under `JPYC_CLI_HOME` when set, otherwise `~/.jpyc-cli`.
-- The current wallet store is a local JSON file. Treat it as sensitive and do not commit it.
-- `wallet show` and `wallet list` do not print private keys.
-- `wallet export-private-key --yes` prints the private key. Use it only in a secure terminal.
-- Commands that broadcast transactions require `--yes`.
-- Prefer `transfer plan` and `transfer send --dry-run` before any real transfer.
+- JPYC CLI は non-custodial です。ウォレットファイルは利用者自身が管理します。
+- ウォレットデータは `JPYC_CLI_HOME` が設定されていればその配下、未設定なら `~/.jpyc-cli` に保存されます。
+- 現在のウォレットストアはローカル JSON ファイルです。秘密情報として扱い、commit しないでください。
+- `wallet show` と `wallet list` は秘密鍵を表示しません。
+- `wallet export-private-key --yes` は秘密鍵を表示します。安全な端末でのみ使ってください。
+- トランザクションを broadcast するコマンドには `--yes` が必要です。
+- 実送金前に `transfer plan` と `transfer send --dry-run` を使ってください。
 
-## Environment Variables
+## 環境変数
 
-| Variable | Purpose |
+| 変数 | 用途 |
 | --- | --- |
-| `JPYC_CLI_HOME` | Directory for local wallet/config files. Defaults to `~/.jpyc-cli`. |
-| `JPYC_ETHEREUM_RPC_URL` | Ethereum mainnet RPC URL. |
-| `JPYC_POLYGON_RPC_URL` | Polygon mainnet RPC URL. |
-| `JPYC_AVALANCHE_RPC_URL` | Avalanche C-Chain RPC URL. |
+| `JPYC_CLI_HOME` | ローカルのウォレット/config 保存先。未設定時は `~/.jpyc-cli`。 |
+| `JPYC_ETHEREUM_RPC_URL` | Ethereum mainnet RPC URL。 |
+| `JPYC_POLYGON_RPC_URL` | Polygon mainnet RPC URL。 |
+| `JPYC_AVALANCHE_RPC_URL` | Avalanche C-Chain RPC URL。 |
 
-## Commands
+## コマンド例
 
-### Schemas
+### スキーマ
 
 ```bash
 jpyc schema list --output json
@@ -142,7 +142,7 @@ jpyc schema wallet.create --output json
 jpyc schema transfer.send --output json
 ```
 
-### Wallets
+### ウォレット
 
 ```bash
 jpyc wallet create --id default --output json
@@ -152,7 +152,7 @@ jpyc wallet show --id default --output json
 jpyc wallet export-private-key --id default --yes --output json
 ```
 
-### Accounts
+### アカウント
 
 ```bash
 jpyc account address --wallet default --output json
@@ -160,7 +160,7 @@ jpyc account balance --wallet default --network polygon --tokens native,jpyc --o
 jpyc account nonce --wallet default --network polygon --output json
 ```
 
-### Transfers
+### 送金
 
 ```bash
 jpyc transfer plan --network polygon --from default --to <address> --amount 1 --token jpyc --output json
@@ -168,7 +168,7 @@ jpyc transfer send --network polygon --from default --to <address> --amount 1 --
 jpyc transfer send --network polygon --from default --to <address> --amount 1 --token jpyc --yes --output json
 ```
 
-### Contracts
+### コントラクト read
 
 ```bash
 jpyc contract read \
@@ -179,34 +179,34 @@ jpyc contract read \
   --output json
 ```
 
-## Development
+## 開発
 
-Install dependencies:
+依存関係のインストール:
 
 ```bash
 npm ci
 ```
 
-Run checks:
+チェック:
 
 ```bash
 npm run typecheck
 npm run build
 ```
 
-Run Alchemy-backed fork tests:
+Alchemy RPC を使った fork test:
 
 ```bash
 export JPYC_ALCHEMY_API_KEY="<key>"
 npm run test:fork:alchemy
 ```
 
-Preview the npm package:
+npm package の中身を確認:
 
 ```bash
 npm pack --dry-run
 ```
 
-## License
+## ライセンス
 
 MIT
