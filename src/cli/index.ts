@@ -45,6 +45,7 @@ type WalletStore = {
 };
 
 type NetworkId = 'ethereum' | 'polygon' | 'avalanche';
+type TokenId = 'native' | 'jpyc';
 
 type NetworkConfig = {
   name: NetworkId;
@@ -163,6 +164,12 @@ function flagBool(flags: Record<string, string | boolean>, key: string): boolean
 function asNetwork(value: string | undefined): NetworkId {
   if (value === 'ethereum' || value === 'polygon' || value === 'avalanche') return value;
   throw new CliError(2, 'UNKNOWN_NETWORK', `Unsupported network: ${value ?? '(missing)'}`);
+}
+
+function asToken(value: string | undefined): TokenId {
+  const token = value ?? 'jpyc';
+  if (token === 'native' || token === 'jpyc') return token;
+  throw new CliError(2, 'INVALID_ARGUMENT', `Unsupported --token: ${token}. Supported values: native, jpyc`);
 }
 
 function asAddress(value: string | undefined, label: string): Address {
@@ -498,7 +505,7 @@ class CliRuntime {
     const from = flagString(flags, 'from');
     const to = asAddress(flagString(flags, 'to'), '--to');
     const amount = flagString(flags, 'amount');
-    const token = flagString(flags, 'token') ?? 'jpyc';
+    const token = asToken(flagString(flags, 'token'));
     if (!from || !amount) throw new CliError(2, 'INVALID_ARGUMENT', '--from and --amount are required');
     return { networkId, from, to, amount, token };
   }
