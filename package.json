@@ -1,12 +1,30 @@
 {
   "name": "@yourbright/jpyc-cli",
   "version": "0.0.0",
-  "private": true,
+  "description": "Local-first JPYC command-line tooling",
+  "license": "MIT",
   "type": "module",
   "bin": {
-    "jpyc": "./dist/cli/index.js"
+    "jpyc": "./dist/cli/main.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yourbright-jp/jpyc-cli.git"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "prepublishOnly": "npm run typecheck && npm run build",
     "test": "npm run test:fork",
     "test:fork": "RUN_ANVIL_FORK_TESTS=1 vitest run tests/anvil/jpyc-fork.test.ts",
     "test:fork:alchemy": "node scripts/run-fork-with-alchemy.mjs",
@@ -16,10 +34,10 @@
   "devDependencies": {
     "@types/node": "^20.19.2",
     "typescript": "^5.9.3",
-    "viem": "^2.48.4",
     "vitest": "^4.0.15"
   },
   "dependencies": {
-    "@noble/ciphers": "^2.2.0"
+    "@noble/ciphers": "^2.2.0",
+    "viem": "^2.48.4"
   }
 }
