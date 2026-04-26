@@ -1,0 +1,23 @@
+{
+  "name": "@yourbright/jpyc-cli",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "jpyc": "./dist/cli/index.js"
+  },
+  "scripts": {
+    "test": "vitest run --exclude 'tests/anvil/**'",
+    "test:unit": "vitest run --exclude 'tests/anvil/**'",
+    "test:anvil": "RUN_ANVIL_TESTS=1 vitest run tests/anvil/anvil-cli.test.ts",
+    "test:fork": "RUN_ANVIL_FORK_TESTS=1 vitest run tests/anvil/jpyc-fork.test.ts",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.2",
+    "typescript": "^5.9.3",
+    "viem": "^2.48.4",
+    "vitest": "^4.0.15"
+  }
+}
