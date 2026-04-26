@@ -5,3 +5,6 @@ coverage/
 .env.local
 *.log
 .worktrees/
+.superpowers/
+.codex
+.codex/
