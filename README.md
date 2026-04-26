@@ -47,12 +47,10 @@ npx --yes --package=@yourbright/jpyc-cli -- jpyc schema list --output json
 
 ## Codex Skill としてインストールする
 
-Codex に JPYC CLI の安全な使い方を覚えさせたい場合は、この repo の skill を GitHub 経由でインストールできます。
+Codex に JPYC CLI の安全な使い方を覚えさせたい場合は、GitHub CLI `v2.90.0` 以降の `gh skill` でインストールできます。
 
 ```bash
-python3 ~/.codex/skills/.system/skill-installer/scripts/install-skill-from-github.py \
-  --repo yourbright-jp/jpyc-cli \
-  --path skills/jpyc-cli
+gh skill install yourbright-jp/jpyc-cli jpyc-cli --agent codex --scope user
 ```
 
 インストール後、Codex を再起動してから `$jpyc-cli` を指定してください。
