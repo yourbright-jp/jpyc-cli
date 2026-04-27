@@ -1,9 +1,12 @@
 ---
 name: jpyc-cli
-description: Use when Codex needs to install or operate @yourbright/jpyc-cli for JPYC wallet creation, wallet listing, address/balance checks, transfer planning, dry-runs, JPYC/native token transfers, contract reads/writes, or npm package verification. Trigger whenever the user asks to use JPYC CLI, install JPYC CLI, check JPYC balances, create/import a JPYC wallet, send JPYC, or prepare commands for an AI agent to operate JPYC CLI safely.
+description: Use when Codex needs to install or operate the unofficial @yourbright/jpyc-cli by YourBright for JPYC wallet creation, wallet listing, address/balance checks, transfer planning, dry-runs, JPYC/native token transfers, contract reads/writes, or npm package verification. Trigger whenever the user asks to use JPYC CLI, install JPYC CLI, check JPYC balances, create/import a JPYC wallet, send JPYC, or prepare commands for an AI agent to operate JPYC CLI safely.
 ---
 
 # JPYC CLI
+
+**非公式サービスです。**
+本サービスは、YourBright社が提供するサービスです。JPYC株式会社による公式サービスではありません。
 
 Use JPYC CLI as a local-first, non-custodial command-line tool. Prefer JSON output for every command. Treat wallet files and private keys as secrets.
 

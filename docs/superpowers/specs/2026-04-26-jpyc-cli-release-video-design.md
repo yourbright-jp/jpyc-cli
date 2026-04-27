@@ -1,5 +1,8 @@
 # JPYC-CLI Release Video Design
 
+> **非公式サービスです。**
+> 本サービスは、YourBright社が提供するサービスです。JPYC株式会社による公式サービスではありません。
+
 ## Summary
 
 Create a 30-40 second 1920x1080 HyperFrames release announcement video for JPYC-CLI.
@@ -21,7 +24,7 @@ The approved direction is **Flowing Agent Demo**: a light, fluid narrative showi
 
 ## Visual Identity
 
-Use JPYC info brand cues from `https://jpyc-info.com/`.
+Use the light, information-focused visual direction from the existing YourBright JPYC-related materials without implying JPYC株式会社 official status.
 
 - Mood: fluid, light, technical, trustworthy.
 - Canvas: light.
@@ -51,7 +54,7 @@ The video follows one agent-safe workflow:
 
 ### Scene 1: Release Title, 0-5s
 
-Show a clean JPYC-CLI release title over a light JPYC info-inspired canvas. Soft blue and teal flow lines move behind white UI surfaces.
+Show a clean JPYC-CLI release title over a light information-tool canvas. Soft blue and teal flow lines move behind white UI surfaces.
 
 Primary copy:
 

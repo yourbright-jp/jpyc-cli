@@ -1,4 +1,4 @@
 interface:
   display_name: "JPYC CLI"
-  short_description: "Operate JPYC CLI safely"
-  default_prompt: "Use $jpyc-cli to install JPYC CLI, create a wallet, check balances, and dry-run transfers safely."
+  short_description: "Operate the unofficial YourBright JPYC CLI safely"
+  default_prompt: "Use $jpyc-cli to install the unofficial YourBright JPYC CLI, create a wallet, check balances, and dry-run transfers safely. This is not an official service by JPYC株式会社."

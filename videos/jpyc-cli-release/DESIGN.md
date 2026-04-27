@@ -1,8 +1,11 @@
 # JPYC-CLI Release Video Visual Design
 
+> **非公式サービスです。**
+> 本サービスは、YourBright社が提供するサービスです。JPYC株式会社による公式サービスではありません。
+
 ## Style Prompt
 
-Light, fluid, technical release announcement using JPYC info brand cues. The canvas is airy and trustworthy, with white interface surfaces floating over a pale blue background. Blue is the primary brand signal; teal appears only as a flowing motion accent that connects agent, terminal, wallet, balance, plan, and dry-run moments.
+Light, fluid, technical release announcement for an unofficial YourBright tool for JPYC workflows. The canvas is airy and trustworthy, with white interface surfaces floating over a pale blue background. Blue is the primary accent; teal appears only as a flowing motion accent that connects agent, terminal, wallet, balance, plan, and dry-run moments.
 
 ## Colors
 

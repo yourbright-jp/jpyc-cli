@@ -1,10 +1,13 @@
 # JPYC-CLI Release Video Implementation Plan
 
+> **非公式サービスです。**
+> 本サービスは、YourBright社が提供するサービスです。JPYC株式会社による公式サービスではありません。
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Build a HyperFrames HTML video composition for the approved JPYC-CLI release announcement.
 
-**Architecture:** Create a self-contained video project under `videos/jpyc-cli-release/` with a root `index.html`, a project-local `DESIGN.md`, and a README with validation and render commands. The composition is one 1920x1080 HyperFrames root timeline with five timed scenes, light JPYC info-inspired styling, GSAP entrances, and transition overlays between scenes.
+**Architecture:** Create a self-contained video project under `videos/jpyc-cli-release/` with a root `index.html`, a project-local `DESIGN.md`, and a README with validation and render commands. The composition is one 1920x1080 HyperFrames root timeline with five timed scenes, light information-tool styling, GSAP entrances, and transition overlays between scenes.
 
 **Tech Stack:** HyperFrames HTML data attributes, GSAP timelines, CSS, Node.js 22+ for `npx hyperframes lint/inspect/preview/render`.
 
@@ -12,7 +15,7 @@
 
 ## File Structure
 
-- Create `videos/jpyc-cli-release/DESIGN.md`: HyperFrames visual identity source, based on the approved JPYC info light/fluid direction.
+- Create `videos/jpyc-cli-release/DESIGN.md`: HyperFrames visual identity source, based on the approved light/fluid direction for an unofficial YourBright tool.
 - Create `videos/jpyc-cli-release/index.html`: root HyperFrames composition and all scene markup, CSS, and GSAP timeline registration.
 - Create `videos/jpyc-cli-release/README.md`: local preview, lint, inspect, and render commands plus Node 22 prerequisite.
 - Modify `docs/superpowers/plans/2026-04-26-jpyc-cli-release-video.md`: track task completion as implementation proceeds.
@@ -42,7 +45,7 @@ Create `videos/jpyc-cli-release/DESIGN.md` with:
 
 ## Style Prompt
 
-Light, fluid, technical release announcement using JPYC info brand cues. The canvas is airy and trustworthy, with white interface surfaces floating over a pale blue background. Blue is the primary brand signal; teal appears only as a flowing motion accent that connects agent, terminal, wallet, balance, plan, and dry-run moments.
+Light, fluid, technical release announcement for an unofficial YourBright tool for JPYC workflows. The canvas is airy and trustworthy, with white interface surfaces floating over a pale blue background. Blue is the primary accent; teal appears only as a flowing motion accent that connects agent, terminal, wallet, balance, plan, and dry-run moments.
 
 ## Colors
 

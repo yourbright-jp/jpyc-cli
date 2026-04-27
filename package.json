@@ -1,7 +1,7 @@
 {
   "name": "@yourbright/jpyc-cli",
   "version": "0.1.0",
-  "description": "Local-first JPYC command-line tooling",
+  "description": "Unofficial local-first JPYC command-line tooling by YourBright",
   "license": "MIT",
   "type": "module",
   "bin": {

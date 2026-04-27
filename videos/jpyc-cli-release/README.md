@@ -1,5 +1,8 @@
 # JPYC-CLI Release Video
 
+> **非公式サービスです。**
+> 本サービスは、YourBright社が提供するサービスです。JPYC株式会社による公式サービスではありません。
+
 HyperFrames composition for the JPYC-CLI release announcement.
 
 ## Requirements
