@@ -35,6 +35,11 @@ loadDotEnvLocal();
 const apiKey = process.env.JPYC_ALCHEMY_API_KEY ?? process.env.ALCHEMY_API_KEY;
 
 if (!apiKey) {
+  if (process.env.GITHUB_ACTIONS === 'true' && process.env.GITHUB_ACTOR === 'dependabot[bot]') {
+    console.log('Skipping Alchemy fork tests because Dependabot cannot access JPYC_ALCHEMY_API_KEY.');
+    process.exit(0);
+  }
+
   console.error(
     'Missing JPYC_ALCHEMY_API_KEY. Put it in .env.local or export it before running npm run test:fork:alchemy.',
   );
