@@ -39,5 +39,8 @@
   "dependencies": {
     "@noble/ciphers": "^2.2.0",
     "viem": "^2.48.4"
+  },
+  "overrides": {
+    "ws": "8.21.0"
   }
 }
