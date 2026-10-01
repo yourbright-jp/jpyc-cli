@@ -6,7 +6,7 @@ describe('npm publish package metadata', () => {
     const packageJson = JSON.parse(await readFile('package.json', 'utf8'));
 
     expect(packageJson.private).not.toBe(true);
-    expect(packageJson.bin).toEqual({ jpyc: './dist/cli/main.js' });
+    expect(packageJson.bin).toEqual({ jpyc: 'dist/cli/main.js' });
     expect(packageJson.scripts).toMatchObject({
       build: 'tsc -p tsconfig.build.json',
       prepublishOnly: 'npm run typecheck && npm run build',
