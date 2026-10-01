@@ -32,9 +32,9 @@
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
-    "@types/node": "^20.19.2",
+    "@types/node": "^22.14.0",
     "typescript": "^5.9.3",
-    "vitest": "^4.0.15"
+    "vitest": "^5.0.0"
   },
   "dependencies": {
     "@noble/ciphers": "^2.2.0",

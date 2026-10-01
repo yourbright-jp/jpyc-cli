@@ -44,7 +44,13 @@ describe('RPC chain id validation', () => {
   it('rejects RPC endpoints whose chainId does not match the selected network', async () => {
     const rpc = await startRpcServer('0x1');
     const homeDir = await mkdtemp(join(tmpdir(), 'jpyc-cli-chain-id-'));
-    const cli = createJpycCli({ homeDir, env: { JPYC_POLYGON_RPC_URL: rpc.url } });
+    const cli = createJpycCli({
+      homeDir,
+      env: {
+        JPYC_KEYSTORE_PASSWORD: 'test-password',
+        JPYC_POLYGON_RPC_URL: rpc.url,
+      },
+    });
 
     try {
       await cli.run(['wallet', 'create', '--id', 'default', '--output', 'json']);
